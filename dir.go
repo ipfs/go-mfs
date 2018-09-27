@@ -14,6 +14,7 @@ import (
 	uio "github.com/ipfs/go-unixfs/io"
 
 	cid "github.com/ipfs/go-cid"
+	apicid "github.com/ipfs/go-cidutil/apicid"
 	ipld "github.com/ipfs/go-ipld-format"
 )
 
@@ -229,7 +230,7 @@ type NodeListing struct {
 	Name string
 	Type int
 	Size int64
-	Hash string
+	Hash apicid.Hash
 }
 
 func (d *Directory) ListNames(ctx context.Context) ([]string, error) {
@@ -274,7 +275,7 @@ func (d *Directory) ForEachEntry(ctx context.Context, f func(NodeListing) error)
 		child := NodeListing{
 			Name: l.Name,
 			Type: int(c.Type()),
-			Hash: nd.Cid().String(),
+			Hash: apicid.FromCid(nd.Cid()),
 		}
 
 		if c, ok := c.(*File); ok {
