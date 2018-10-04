@@ -6,6 +6,8 @@ import (
 	gopath "path"
 	"strings"
 
+	dag "github.com/ipfs/go-merkledag"
+	ft "github.com/ipfs/go-unixfs"
 	path "github.com/ipfs/go-path"
 
 	cid "github.com/ipfs/go-cid"
@@ -84,6 +86,11 @@ func lookupDir(r *Root, path string) (*Directory, error) {
 
 // PutNode inserts 'nd' at 'path' in the given mfs
 func PutNode(r *Root, path string, nd ipld.Node) error {
+	err := checkIntegrity(nd)
+	if err != nil {
+		return err
+	}
+
 	dirp, filename := gopath.Split(path)
 	if filename == "" {
 		return fmt.Errorf("cannot create file with empty name")
@@ -95,6 +102,26 @@ func PutNode(r *Root, path string, nd ipld.Node) error {
 	}
 
 	return pdir.AddChild(filename, nd)
+}
+
+// checkIntegrity checks the integrity of the node
+func checkIntegrity(nd ipld.Node) error {
+	switch n := nd.(type) {
+	case *dag.ProtoNode:
+		if n.Data() == nil {
+			return fmt.Errorf("node data is empty")
+		}
+
+		_, err := ft.FSNodeFromBytes(n.Data())
+		if err != nil {
+			return err
+		}
+	case *dag.RawNode:
+		return nil
+	default:
+		return fmt.Errorf("unrecognized node type in node")
+	}
+	return nil
 }
 
 // MkdirOpts is used by Mkdir
