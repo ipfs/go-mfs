@@ -33,9 +33,9 @@
     },
     {
       "author": "why",
-      "hash": "QmZbQUht8hzKmQxLHnzY14WSuoQqYkR5mn4cunchyWPmhn",
+      "hash": "QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3",
       "name": "go-path",
-      "version": "1.1.15"
+      "version": "1.1.16"
     }
   ],
   "gxVersion": "0.12.1",
@@ -43,6 +43,6 @@
   "license": "MIT",
   "name": "go-mfs",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "version": "0.1.17"
+  "version": "0.1.18"
 }
 
