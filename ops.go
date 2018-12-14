@@ -1,6 +1,7 @@
 package mfs
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	gopath "path"
@@ -12,31 +13,47 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 )
 
+var (
+	errMvDirToFile    = errors.New("can not move directory to file path")
+	errMvParentDir    = errors.New("can not move parent directory to sub directory")
+	errInvalidDirPath = errors.New("src path end with '/' is not a directory")
+)
+
 // Mv moves the file or directory at 'src' to 'dst'
 func Mv(r *Root, src, dst string) error {
-	srcDir, srcFname := gopath.Split(src)
-
-	var dstDirStr string
-	var filename string
-	if dst[len(dst)-1] == '/' {
-		dstDirStr = dst
-		filename = srcFname
-	} else {
-		dstDirStr, filename = gopath.Split(dst)
+	if strings.HasPrefix(dst, src) {
+		return errMvParentDir
 	}
 
-	// get parent directories of both src and dest first
-	dstDir, err := lookupDir(r, dstDirStr)
-	if err != nil {
-		return err
-	}
+	cleanSrc := strings.TrimRight(src, "/")
+	srcDir, srcFilename := gopath.Split(cleanSrc)
 
 	srcDirObj, err := lookupDir(r, srcDir)
 	if err != nil {
 		return err
 	}
 
-	srcObj, err := srcDirObj.Child(srcFname)
+	srcObj, err := srcDirObj.Child(srcFilename)
+	if err != nil {
+		return err
+	}
+
+	err = checkPath(srcObj, src)
+	if err != nil {
+		return err
+	}
+
+	var dstDirStr string
+	var filename string
+	if dst[len(dst)-1] == '/' {
+		dstDirStr = dst
+		filename = srcFilename
+	} else {
+		dstDirStr, filename = gopath.Split(dst)
+	}
+
+	// get parent directories of dst
+	dstDir, err := lookupDir(r, dstDirStr)
 	if err != nil {
 		return err
 	}
@@ -50,9 +67,13 @@ func Mv(r *Root, src, dst string) error {
 	if err == nil {
 		switch n := fsn.(type) {
 		case *File:
+			if srcObj.Type() == TDir {
+				return errMvDirToFile
+			}
 			_ = dstDir.Unlink(filename)
 		case *Directory:
 			dstDir = n
+			filename = srcFilename
 		default:
 			return fmt.Errorf("unexpected type at path: %s", dst)
 		}
@@ -65,7 +86,16 @@ func Mv(r *Root, src, dst string) error {
 		return err
 	}
 
-	return srcDirObj.Unlink(srcFname)
+	return srcDirObj.Unlink(srcFilename)
+}
+
+// if fsn is a file, and path can't end with '/'
+func checkPath(fsn FSNode, path string) error {
+	// if src path is a file, it can't end with '/'
+	if fsn.Type() == TFile && path[len(path)-1] == '/' {
+		return errInvalidDirPath
+	}
+	return nil
 }
 
 func lookupDir(r *Root, path string) (*Directory, error) {
