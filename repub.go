@@ -18,11 +18,9 @@ type Republisher struct {
 	TimeoutShort        time.Duration
 	valueHasBeenUpdated chan struct{}
 	pubfunc             PubFunc
-	immediatePublish    chan chan struct{}
 
 	valueLock          sync.Mutex
-	valueToPublish     cid.Cid
-	lastValuePublished cid.Cid
+	valueToPublish     *cid.Cid
 
 	ctx    context.Context
 	cancel func()
@@ -37,29 +35,13 @@ func NewRepublisher(ctx context.Context, pf PubFunc, tshort, tlong time.Duration
 		TimeoutLong:         tlong,
 		valueHasBeenUpdated: make(chan struct{}, 1),
 		pubfunc:             pf,
-		immediatePublish:    make(chan chan struct{}),
 		ctx:                 ctx,
 		cancel:              cancel,
 	}
 }
 
-// WaitPub waits for the current value to be published (or returns early
-// if it already has).
-func (rp *Republisher) WaitPub() {
-	rp.valueLock.Lock()
-	valueHasBeenPublished := rp.lastValuePublished == rp.valueToPublish
-	rp.valueLock.Unlock()
-	if valueHasBeenPublished {
-		return
-	}
-
-	wait := make(chan struct{})
-	rp.immediatePublish <- wait
-	<-wait
-}
-
 func (rp *Republisher) Close() error {
-	err := rp.publish(rp.ctx)
+	err := rp.PublishNow()
 	rp.cancel()
 	return err
 }
@@ -69,7 +51,7 @@ func (rp *Republisher) Close() error {
 // the next publish occurs in order to more efficiently batch updates.
 func (rp *Republisher) Update(c cid.Cid) {
 	rp.valueLock.Lock()
-	rp.valueToPublish = c
+	rp.valueToPublish = &c
 	rp.valueLock.Unlock()
 
 	select {
@@ -106,8 +88,6 @@ func (rp *Republisher) Run() {
 			longer := time.After(rp.TimeoutLong)
 
 		wait:
-			var valueHasBeenPublished chan struct{}
-
 			select {
 			case <-rp.ctx.Done():
 				return
@@ -121,15 +101,9 @@ func (rp *Republisher) Run() {
 
 			case <-quick:
 			case <-longer:
-			case valueHasBeenPublished = <-rp.immediatePublish:
 			}
 
-			err := rp.publish(rp.ctx)
-			if valueHasBeenPublished != nil {
-				// The user is waiting in `WaitPub` with this channel, signal
-				// that the `publish` has happened.
-				valueHasBeenPublished <- struct{}{}
-			}
+			err := rp.PublishNow()
 			if err != nil {
 				log.Errorf("republishRoot error: %s", err)
 			}
@@ -139,17 +113,28 @@ func (rp *Republisher) Run() {
 
 // Wrapper function around the user-defined `pubfunc`. It publishes
 // the (last) `valueToPublish` set and registers it in `lastValuePublished`.
-func (rp *Republisher) publish(ctx context.Context) error {
+// TODO: Allow passing a value to `PublishNow` which supersedes the
+// internal `valueToPublish`.
+func (rp *Republisher) PublishNow() error {
+
 	rp.valueLock.Lock()
-	topub := rp.valueToPublish
+	extractedValue := rp.valueToPublish
 	rp.valueLock.Unlock()
 
-	err := rp.pubfunc(ctx, topub)
+	if extractedValue == nil {
+		return nil
+		// If this value is `nil` it means we've done a publish
+		// since the last `Update`.
+	}
+
+	err := rp.pubfunc(rp.ctx, *extractedValue);
 	if err != nil {
 		return err
 	}
+
 	rp.valueLock.Lock()
-	rp.lastValuePublished = topub
+	rp.valueToPublish = nil
 	rp.valueLock.Unlock()
+
 	return nil
 }

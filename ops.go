@@ -235,6 +235,6 @@ func FlushPath(rt *Root, pth string) error {
 		return err
 	}
 
-	rt.repub.WaitPub()
+	rt.repub.PublishNow()
 	return nil
 }
