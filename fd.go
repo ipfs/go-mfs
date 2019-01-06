@@ -150,6 +150,12 @@ func (fi *fileDescriptor) flushUp(fullSync bool) error {
 	fi.inode.nodeLock.Unlock()
 	// TODO: Maybe all this logic should happen in `File`.
 
+	if parent == nil {
+		// TODO: This file has already been unlinked from the MFS,
+		// can not propagate any update upwards.
+		return nil
+	}
+
 	if fullSync {
 		return parent.updateChildEntry(child{name, nd})
 	}

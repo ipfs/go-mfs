@@ -337,7 +337,7 @@ func (d *Directory) Unlink(name string) error {
 	entry, ok := d.entriesCache[name]
 	if ok {
 		delete(d.entriesCache, name)
-		entry.Type()
+		entry.RemoveParent()
 	}
 
 	return d.unixfsDir.RemoveChild(d.ctx, name)
@@ -345,6 +345,8 @@ func (d *Directory) Unlink(name string) error {
 
 // TODO: Evaluate taking `parent` out of the `inode` which
 // was meant to be set at initialization only.
+// TODO: This could actually transform the directory into a
+// new root, but it wouldn't work with a `File`.
 func (d *Directory) RemoveParent() {
 	d.inode.parent = nil
 }
@@ -353,6 +355,12 @@ func (d *Directory) Flush() error {
 	nd, err := d.GetNode()
 	if err != nil {
 		return err
+	}
+
+	if d.parent == nil {
+		// TODO: This file has already been unlinked from the MFS,
+		// can not propagate any update upwards.
+		return nil
 	}
 
 	return d.parent.updateChildEntry(child{d.name, nd})
@@ -434,6 +442,7 @@ func (d *Directory) Path() string {
 		case *Root:
 			return "/" + out
 		default:
+			// TODO: `nil` case.
 			panic("directory parent neither a directory nor a root")
 		}
 	}
