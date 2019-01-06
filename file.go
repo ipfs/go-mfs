@@ -175,3 +175,7 @@ func (fi *File) Sync() error {
 func (fi *File) Type() NodeType {
 	return TFile
 }
+
+func (d *File) RemoveParent() {
+	d.inode.parent = nil
+}

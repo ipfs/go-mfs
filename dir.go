@@ -331,9 +331,22 @@ func (d *Directory) Unlink(name string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	delete(d.entriesCache, name)
+	// We need to decouple the `FSNode` from the rest of the tree
+	// so any modifications won't propagate upwards, it's not enough
+	// with just removing it from the cache.
+	entry, ok := d.entriesCache[name]
+	if ok {
+		delete(d.entriesCache, name)
+		entry.Type()
+	}
 
 	return d.unixfsDir.RemoveChild(d.ctx, name)
+}
+
+// TODO: Evaluate taking `parent` out of the `inode` which
+// was meant to be set at initialization only.
+func (d *Directory) RemoveParent() {
+	d.inode.parent = nil
 }
 
 func (d *Directory) Flush() error {

@@ -69,6 +69,7 @@ type FSNode interface {
 	GetNode() (ipld.Node, error)
 	Flush() error
 	Type() NodeType
+	RemoveParent()
 }
 
 // IsDir checks whether the FSNode is dir type
