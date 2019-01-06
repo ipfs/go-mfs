@@ -368,6 +368,59 @@ func TestDirectoryLoadFromDag(t *testing.T) {
 	}
 }
 
+// TestEditUnlinkedFile test that a file that has been `Unlink`ed
+// from a parent directory can't modify it after, any changes on
+// that unlinked subtree shouldn't affect the rest of the MFS.
+func TestEditUnlinkedFile(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ds, rt := setupRoot(ctx, t)
+
+	rootDir := rt.GetDirectory()
+
+	rootDirNode, err := rootDir.GetNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalCid := rootDirNode.Cid()
+
+	err = Mkdir(rt, "dir", MkdirOpts{
+		Mkparents:  true,
+		Flush:      true,
+		CidBuilder: cid.V0Builder{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	createdDirFSNode, err := rootDir.Child("dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	createdDir := createdDirFSNode.(*Directory)
+
+	err = rootDir.Unlink("dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = createdDir.AddChild("file", getRandFile(t, ds, 1000))
+	if err != nil {
+		t.Fatal(err)
+	}
+	createdDir.Flush()
+
+	rootDirNode, err = rootDir.GetNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newCid := rootDirNode.Cid()
+
+	if originalCid != newCid {
+		t.Fatalf("CID descrapancy: %s vs %s", originalCid, newCid)
+	}
+}
+
 func TestMfsFile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
