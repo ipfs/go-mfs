@@ -85,19 +85,23 @@ func IsFile(fsn FSNode) bool {
 
 // Root represents the root of a filesystem tree.
 type Root struct {
-
 	// Root directory of the MFS layout.
 	dir *Directory
 
 	repub *Republisher
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewRoot creates a new Root and starts up a republisher routine for it.
-func NewRoot(parent context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
+func NewRoot(ctx context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
+
+	ctx, cancel := context.WithCancel(ctx)
 
 	var repub *Republisher
 	if pf != nil {
-		repub = NewRepublisher(parent, pf, time.Millisecond*300, time.Second*3)
+		repub = NewRepublisher(ctx, pf, time.Millisecond*300, time.Second*3)
 
 		// No need to take the lock here since we just created
 		// the `Republisher` and no one has access to it yet.
@@ -106,7 +110,9 @@ func NewRoot(parent context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf
 	}
 
 	root := &Root{
-		repub: repub,
+		repub:  repub,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	fsn, err := ft.FSNodeFromBytes(node.Data())
@@ -118,7 +124,7 @@ func NewRoot(parent context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf
 
 	switch fsn.Type() {
 	case ft.TDirectory, ft.THAMTShard:
-		newDir, err := NewDirectory(parent, node.String(), node, root, ds)
+		newDir, err := NewDirectory(ctx, node.String(), node, root, ds)
 		if err != nil {
 			return nil, err
 		}
@@ -190,7 +196,7 @@ func (kr *Root) FlushMemFree(ctx context.Context) error {
 // the top), document it and maybe make it an anonymous variable (if
 // that's possible).
 func (kr *Root) updateChildEntry(c child) error {
-	err := kr.GetDirectory().dagService.Add(context.TODO(), c.Node)
+	err := kr.GetDirectory().dagService.Add(kr.ctx, c.Node)
 	if err != nil {
 		return err
 	}
@@ -204,6 +210,8 @@ func (kr *Root) updateChildEntry(c child) error {
 }
 
 func (kr *Root) Close() error {
+	defer kr.cancel()
+
 	nd, err := kr.GetDirectory().GetNode()
 	if err != nil {
 		return err
