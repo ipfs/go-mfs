@@ -15,9 +15,9 @@
     },
     {
       "author": "why",
-      "hash": "QmQXze9tG878pa4Euya4rrDpyTNX3kQe4dhCaBzBozGgpe",
+      "hash": "QmQReF8uaPBw6uKbDZQzaWyxCL4NuMMotcztXv1fKTSzkg",
       "name": "go-unixfs",
-      "version": "1.2.12"
+      "version": "1.2.13"
     },
     {
       "author": "whyrusleeping",
@@ -43,6 +43,6 @@
   "license": "MIT",
   "name": "go-mfs",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "version": "0.1.31"
+  "version": "0.1.33"
 }
 
