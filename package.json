@@ -9,9 +9,9 @@
   "gxDependencies": [
     {
       "author": "why",
-      "hash": "QmTQdH4848iTVCJmKXYyRiK72HufWTLYQQ8iN3JaQ8K1Hq",
+      "hash": "QmZ7qUTjmrgDTuJNufgjrAkGFxs5LiptVJyVjfaEFiFN8q",
       "name": "go-merkledag",
-      "version": "1.1.26"
+      "version": "1.1.27"
     },
     {
       "author": "why",
@@ -27,15 +27,15 @@
     },
     {
       "author": "whyrusleeping",
-      "hash": "QmcKKBwfz6FyQdHR2jsXrrF6XeSBXYL86anmWNewpFpoF5",
+      "hash": "QmRL22E4paat7ky7vx9MLpR97JHHbFPrg3ytFQw6qp1y1s",
       "name": "go-ipld-format",
-      "version": "0.7.2"
+      "version": "0.8.0"
     },
     {
       "author": "why",
-      "hash": "QmNYPETsdAu2uQ1k9q9S1jYEGURaLHV6cbYRSVFVRftpF8",
+      "hash": "QmdCKmdARJPTzGFmhQAdmiNkH8x1NYJ5nR3oTuyMSheGe1",
       "name": "go-path",
-      "version": "1.1.27"
+      "version": "1.1.28"
     }
   ],
   "gxVersion": "0.12.1",
