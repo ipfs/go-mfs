@@ -12,6 +12,6 @@ require (
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.0.3
 	github.com/ipfs/go-path v0.0.3
-	github.com/ipfs/go-unixfs v0.0.3
+	github.com/ipfs/go-unixfs v0.0.4
 	github.com/libp2p/go-testutil v0.0.1
 )
