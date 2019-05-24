@@ -10,8 +10,8 @@ require (
 	github.com/ipfs/go-ipfs-util v0.0.1
 	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-log v0.0.1
-	github.com/ipfs/go-merkledag v0.0.5
-	github.com/ipfs/go-path v0.0.6
-	github.com/ipfs/go-unixfs v0.0.7
-	github.com/libp2p/go-testutil v0.1.0
+	github.com/ipfs/go-merkledag v0.0.6
+	github.com/ipfs/go-path v0.0.7
+	github.com/ipfs/go-unixfs v0.0.8
+	github.com/libp2p/go-testutil v0.0.1
 )
