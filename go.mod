@@ -1,4 +1,4 @@
-module github.com/ipfs/go-mfs
+module github.com/TRON-US/go-mfs
 
 require (
 	github.com/ipfs/go-blockservice v0.1.1
@@ -12,6 +12,6 @@ require (
 	github.com/ipfs/go-log v0.0.1
 	github.com/ipfs/go-merkledag v0.1.0
 	github.com/ipfs/go-path v0.0.7
-	github.com/ipfs/go-unixfs v0.1.0
+	github.com/TRON-US/go-unixfs v0.1.0
 	github.com/libp2p/go-libp2p-testing v0.0.4
 )
