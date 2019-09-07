@@ -20,7 +20,7 @@
 `go-mfs` works like a regular Go module:
 
 ```
-> go get github.com/ipfs/go-mfs
+> go get github.com/TRON-US/go-mfs
 ```
 
 It uses [Gx](https://github.com/whyrusleeping/gx) to manage dependencies. You can use `make all` to build it with the `gx` dependencies.
@@ -28,10 +28,10 @@ It uses [Gx](https://github.com/whyrusleeping/gx) to manage dependencies. You ca
 ## Usage
 
 ```
-import "github.com/ipfs/go-mfs"
+import "github.com/TRON-US/go-mfs"
 ```
 
-Check the [GoDoc documentation](https://godoc.org/github.com/ipfs/go-mfs)
+Check the [GoDoc documentation](https://godoc.org/github.com/TRON-US/go-mfs)
 
 ## Documentation
 
@@ -50,7 +50,7 @@ This repository contains many files, all belonging to the root `mfs` package.
 * `ops.go`: Functions that do not belong to either `File` nor `Directory` (although they mostly operate on them) that contain common operations to the MFS, e.g., find, move, add a file, make a directory.
 * `root.go`: MFS `Root` (a `Directory` with republishing support).
 * `repub.go`: `Republisher`.
-* `mfs_test.go`: General tests (needs a [revision](https://github.com/ipfs/go-mfs/issues/9)).
+* `mfs_test.go`: General tests (needs a [revision](https://github.com/TRON-US/go-mfs/issues/9)).
 * `repub_test.go`: Republisher-specific tests (contains only the `TestRepublisher` function).
 
 ## Contribute

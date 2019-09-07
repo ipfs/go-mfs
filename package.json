@@ -1,10 +1,10 @@
 {
   "author": "hsanjuan",
   "bugs": {
-    "url": "https://github.com/ipfs/go-mfs"
+    "url": "https://github.com/TRON-US/go-mfs"
   },
   "gx": {
-    "dvcsimport": "github.com/ipfs/go-mfs"
+    "dvcsimport": "github.com/TRON-US/go-mfs"
   },
   "gxDependencies": [
     {
