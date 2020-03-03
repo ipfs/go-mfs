@@ -15,3 +15,5 @@ require (
 	github.com/ipfs/go-unixfs v0.1.0
 	github.com/libp2p/go-libp2p-testing v0.0.4
 )
+
+go 1.13
