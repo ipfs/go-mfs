@@ -160,9 +160,9 @@ func (fi *File) Flush() error {
 		return err
 	}
 
-	defer fd.Close()
-
-	return fd.Flush()
+	// Close calls fd.Flush() and will do a full sync since it was opened with
+	// Sync=true
+	return fd.Close()
 }
 
 func (fi *File) Sync() error {

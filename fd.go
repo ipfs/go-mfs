@@ -1,6 +1,7 @@
 package mfs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -19,6 +20,8 @@ const (
 	stateDirty
 	stateClosed
 )
+
+var ErrClosed = errors.New("file closed")
 
 // One `File` can have many `FileDescriptor`s associated to it
 // (only one if it's RW, many if they are RO, see `File.desclock`).
@@ -145,7 +148,7 @@ func (fi *fileDescriptor) flushUp(fullSync bool) error {
 		if err != nil {
 			return err
 		}
-		err = fi.inode.dagService.Add(context.TODO(), nd)
+		err = fi.inode.dagService.Add(context.Background(), nd)
 		if err != nil {
 			return err
 		}

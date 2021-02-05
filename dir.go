@@ -34,8 +34,6 @@ type Directory struct {
 	lock sync.Mutex
 	// TODO: What content is being protected here exactly? The entire directory?
 
-	ctx context.Context
-
 	// UnixFS directory implementation used for creating,
 	// reading and editing directories.
 	unixfsDir uio.Directory
@@ -47,7 +45,7 @@ type Directory struct {
 //
 // You probably don't want to call this directly. Instead, construct a new root
 // using NewRoot.
-func NewDirectory(ctx context.Context, name string, node ipld.Node, parent parent, dserv ipld.DAGService) (*Directory, error) {
+func NewDirectory(name string, node ipld.Node, parent parent, dserv ipld.DAGService) (*Directory, error) {
 	db, err := uio.NewDirectoryFromNode(dserv, node)
 	if err != nil {
 		return nil, err
@@ -59,7 +57,6 @@ func NewDirectory(ctx context.Context, name string, node ipld.Node, parent paren
 			parent:     parent,
 			dagService: dserv,
 		},
-		ctx:          ctx,
 		unixfsDir:    db,
 		entriesCache: make(map[string]FSNode),
 		modTime:      time.Now(),
@@ -117,7 +114,7 @@ func (d *Directory) localUpdate(c child) (*dag.ProtoNode, error) {
 		return nil, dag.ErrNotProtobuf
 	}
 
-	err = d.dagService.Add(d.ctx, nd)
+	err = d.dagService.Add(context.Background(), nd)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +161,7 @@ func (d *Directory) cacheNode(name string, nd ipld.Node) (FSNode, error) {
 
 		switch fsn.Type() {
 		case ft.TDirectory, ft.THAMTShard:
-			ndir, err := NewDirectory(d.ctx, name, nd, d, d.dagService)
+			ndir, err := NewDirectory(name, nd, d, d.dagService)
 			if err != nil {
 				return nil, err
 			}
@@ -211,7 +208,7 @@ func (d *Directory) Uncache(name string) {
 // childFromDag searches through this directories dag node for a child link
 // with the given name
 func (d *Directory) childFromDag(name string) (ipld.Node, error) {
-	return d.unixfsDir.Find(d.ctx, name)
+	return d.unixfsDir.Find(context.Background(), name)
 }
 
 // childUnsync returns the child under this directory by the given name
@@ -308,7 +305,7 @@ func (d *Directory) Mkdir(name string) (*Directory, error) {
 	ndir := ft.EmptyDirNode()
 	ndir.SetCidBuilder(d.GetCidBuilder())
 
-	err = d.dagService.Add(d.ctx, ndir)
+	err = d.dagService.Add(context.Background(), ndir)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +315,7 @@ func (d *Directory) Mkdir(name string) (*Directory, error) {
 		return nil, err
 	}
 
-	dirobj, err := NewDirectory(d.ctx, name, ndir, d, d.dagService)
+	dirobj, err := NewDirectory(name, ndir, d, d.dagService)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +330,7 @@ func (d *Directory) Unlink(name string) error {
 
 	delete(d.entriesCache, name)
 
-	return d.unixfsDir.RemoveChild(d.ctx, name)
+	return d.unixfsDir.RemoveChild(context.Background(), name)
 }
 
 func (d *Directory) Flush() error {
@@ -355,7 +352,7 @@ func (d *Directory) AddChild(name string, nd ipld.Node) error {
 		return ErrDirExists
 	}
 
-	err = d.dagService.Add(d.ctx, nd)
+	err = d.dagService.Add(context.Background(), nd)
 	if err != nil {
 		return err
 	}
@@ -376,7 +373,7 @@ func (d *Directory) addUnixFSChild(c child) error {
 		// If the directory HAMT implementation is being used and this
 		// directory is actually a basic implementation switch it to HAMT.
 		if basicDir, ok := d.unixfsDir.(*uio.BasicDirectory); ok {
-			hamtDir, err := basicDir.SwitchToSharding(d.ctx)
+			hamtDir, err := basicDir.SwitchToSharding(context.Background())
 			if err != nil {
 				return err
 			}
@@ -384,7 +381,7 @@ func (d *Directory) addUnixFSChild(c child) error {
 		}
 	}
 
-	err := d.unixfsDir.AddChild(d.ctx, c.Name, c.Node)
+	err := d.unixfsDir.AddChild(context.Background(), c.Name, c.Node)
 	if err != nil {
 		return err
 	}
@@ -441,7 +438,7 @@ func (d *Directory) GetNode() (ipld.Node, error) {
 		return nil, err
 	}
 
-	err = d.dagService.Add(d.ctx, nd)
+	err = d.dagService.Add(context.Background(), nd)
 	if err != nil {
 		return nil, err
 	}

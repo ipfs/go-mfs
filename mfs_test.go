@@ -202,11 +202,11 @@ func catNode(ds ipld.DAGService, nd *dag.ProtoNode) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-func setupRoot(ctx context.Context, t *testing.T) (ipld.DAGService, *Root) {
+func setupRoot(t *testing.T) (ipld.DAGService, *Root) {
 	ds := getDagserv(t)
 
 	root := emptyDirNode()
-	rt, err := NewRoot(ctx, ds, root, func(ctx context.Context, c cid.Cid) error {
+	rt, err := NewRoot(ds, root, func(ctx context.Context, c cid.Cid) error {
 		fmt.Println("PUBLISHED: ", c)
 		return nil
 	})
@@ -219,9 +219,7 @@ func setupRoot(ctx context.Context, t *testing.T) (ipld.DAGService, *Root) {
 }
 
 func TestBasic(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -249,9 +247,7 @@ func TestBasic(t *testing.T) {
 }
 
 func TestMkdir(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	_, rt := setupRoot(ctx, t)
+	_, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -289,7 +285,7 @@ func TestMkdir(t *testing.T) {
 func TestDirectoryLoadFromDag(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -379,9 +375,7 @@ func TestDirectoryLoadFromDag(t *testing.T) {
 }
 
 func TestMvFile(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dagService, rt := setupRoot(ctx, t)
+	dagService, rt := setupRoot(t)
 	rootDir := rt.GetDirectory()
 
 	fi := getRandFile(t, dagService, 1000)
@@ -403,9 +397,7 @@ func TestMvFile(t *testing.T) {
 }
 
 func TestMvFileToSubdir(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dagService, rt := setupRoot(ctx, t)
+	dagService, rt := setupRoot(t)
 	rootDir := rt.GetDirectory()
 
 	_ = mkdirP(t, rootDir, "test1")
@@ -429,9 +421,7 @@ func TestMvFileToSubdir(t *testing.T) {
 }
 
 func TestMvFileToSubdirWithRename(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dagService, rt := setupRoot(ctx, t)
+	dagService, rt := setupRoot(t)
 	rootDir := rt.GetDirectory()
 
 	_ = mkdirP(t, rootDir, "test1")
@@ -455,9 +445,7 @@ func TestMvFileToSubdirWithRename(t *testing.T) {
 }
 
 func TestMvDir(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	dagService, rt := setupRoot(ctx, t)
+	dagService, rt := setupRoot(t)
 	rootDir := rt.GetDirectory()
 
 	_ = mkdirP(t, rootDir, "test1")
@@ -487,9 +475,7 @@ func TestMvDir(t *testing.T) {
 }
 
 func TestMfsFile(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -623,7 +609,7 @@ func TestMfsFile(t *testing.T) {
 func TestMfsDirListNames(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -869,9 +855,7 @@ func testActor(rt *Root, iterations int, errs chan error) {
 }
 
 func TestMfsStress(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	_, rt := setupRoot(ctx, t)
+	_, rt := setupRoot(t)
 
 	numroutines := 10
 
@@ -889,9 +873,7 @@ func TestMfsStress(t *testing.T) {
 }
 
 func TestMfsHugeDir(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	_, rt := setupRoot(ctx, t)
+	_, rt := setupRoot(t)
 
 	for i := 0; i < 10000; i++ {
 		err := Mkdir(rt, fmt.Sprintf("/dir%d", i), MkdirOpts{Mkparents: false, Flush: false})
@@ -902,9 +884,7 @@ func TestMfsHugeDir(t *testing.T) {
 }
 
 func TestMkdirP(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	_, rt := setupRoot(ctx, t)
+	_, rt := setupRoot(t)
 
 	err := Mkdir(rt, "/a/b/c/d/e/f", MkdirOpts{Mkparents: true, Flush: true})
 	if err != nil {
@@ -913,9 +893,7 @@ func TestMkdirP(t *testing.T) {
 }
 
 func TestConcurrentWriteAndFlush(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	d := mkdirP(t, rt.GetDirectory(), "foo/bar/baz")
 	fn := fileNodeFromReader(t, ds, bytes.NewBuffer(nil))
@@ -952,7 +930,7 @@ func TestConcurrentWriteAndFlush(t *testing.T) {
 func TestFlushing(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, rt := setupRoot(ctx, t)
+	_, rt := setupRoot(t)
 
 	dir := rt.GetDirectory()
 	c := mkdirP(t, dir, "a/b/c")
@@ -1054,10 +1032,7 @@ func readFile(rt *Root, path string, offset int64, buf []byte) error {
 }
 
 func TestConcurrentReads(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -1144,10 +1119,7 @@ func writeFile(rt *Root, path string, transform func([]byte) []byte) error {
 }
 
 func TestConcurrentWrites(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	rootdir := rt.GetDirectory()
 
@@ -1209,10 +1181,7 @@ func TestConcurrentWrites(t *testing.T) {
 }
 
 func TestFileDescriptors(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 	dir := rt.GetDirectory()
 
 	nd := dag.NodeWithData(ft.FilePBData(nil, 0))
@@ -1315,9 +1284,7 @@ func TestFileDescriptors(t *testing.T) {
 }
 
 func TestTruncateAtSize(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	dir := rt.GetDirectory()
 
@@ -1340,9 +1307,7 @@ func TestTruncateAtSize(t *testing.T) {
 }
 
 func TestTruncateAndWrite(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	dir := rt.GetDirectory()
 
@@ -1386,13 +1351,11 @@ func TestTruncateAndWrite(t *testing.T) {
 }
 
 func TestFSNodeType(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ds, rt := setupRoot(ctx, t)
+	ds, rt := setupRoot(t)
 
 	// check for IsDir
 	nd := dag.NodeWithData(ft.FolderPBData())
-	di, err := NewDirectory(ctx, "test", nd, rt.GetDirectory(), ds)
+	di, err := NewDirectory("test", nd, rt.GetDirectory(), ds)
 	if err != nil {
 		t.Fatal(err)
 	}
