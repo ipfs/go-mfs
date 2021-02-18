@@ -27,7 +27,7 @@ var ErrDirExists = errors.New("directory already has entry by that name")
 type Directory struct {
 	inode
 
-	// Internal cache with added entries to the directory, its cotents
+	// Internal cache with added entries to the directory, its contents
 	// are synched with the underlying `unixfsDir` node in `sync()`.
 	entriesCache map[string]FSNode
 
@@ -119,8 +119,8 @@ func (d *Directory) localUpdate(c child) (*dag.ProtoNode, error) {
 		return nil, err
 	}
 
+	// A copy is needed here since nd is referenced by dagService.
 	return pbnd.Copy().(*dag.ProtoNode), nil
-	// TODO: Why do we need a copy?
 }
 
 // Update child entry in the underlying UnixFS directory.
@@ -402,7 +402,8 @@ func (d *Directory) sync() error {
 		}
 	}
 
-	// TODO: Should we clean the cache here?
+	// Clear entries cache
+	d.entriesCache = make(map[string]FSNode)
 
 	return nil
 }
