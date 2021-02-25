@@ -246,6 +246,25 @@ func TestBasic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	done := make(chan struct{})
+	go func() {
+		err = rt.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for Close")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rt.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMkdir(t *testing.T) {

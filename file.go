@@ -53,6 +53,8 @@ func NewFile(name string, node ipld.Node, parent parent, dserv ipld.DAGService) 
 }
 
 func (fi *File) Open(flags Flags) (_ FileDescriptor, _retErr error) {
+	// Lock desclock until Close is called on descriptor. Unlock if error
+	// returned here.
 	if flags.Write {
 		fi.desclock.Lock()
 		defer func() {
@@ -71,17 +73,16 @@ func (fi *File) Open(flags Flags) (_ FileDescriptor, _retErr error) {
 		return nil, fmt.Errorf("file opened for neither reading nor writing")
 	}
 
-	fi.nodeLock.RLock()
-	node := fi.node
-	fi.nodeLock.RUnlock()
+	node, err := fi.GetNode()
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO: Move this `switch` logic outside (maybe even
-	// to another package, this seems like a job of UnixFS),
-	// `NewDagModifier` uses the IPLD node, we're not
+	// TODO: Move this logic outside (maybe even to another package, this seems
+	// like a job of UnixFS), `NewDagModifier` uses the IPLD node, we're not
 	// extracting anything just doing a safety check.
-	switch node := node.(type) {
-	case *dag.ProtoNode:
-		fsn, err := ft.FSNodeFromBytes(node.Data())
+	if protoNode, ok := node.(*dag.ProtoNode); ok {
+		fsn, err := ft.FSNodeFromBytes(protoNode.Data())
 		if err != nil {
 			return nil, err
 		}
@@ -94,8 +95,6 @@ func (fi *File) Open(flags Flags) (_ FileDescriptor, _retErr error) {
 		case ft.TFile, ft.TRaw:
 			// OK case
 		}
-	case *dag.RawNode:
-		// Ok as well.
 	}
 
 	dmod, err := mod.NewDagModifier(context.TODO(), node, fi.dagService, chunker.DefaultSplitter)
@@ -121,9 +120,11 @@ func (fi *File) Open(flags Flags) (_ FileDescriptor, _retErr error) {
 // pretty much the same thing as here, we should at least call
 // that function and wrap the `ErrNotUnixfs` with an MFS text.
 func (fi *File) Size() (int64, error) {
-	fi.nodeLock.RLock()
-	defer fi.nodeLock.RUnlock()
-	switch nd := fi.node.(type) {
+	node, err := fi.GetNode()
+	if err != nil {
+		return 0, err
+	}
+	switch nd := node.(type) {
 	case *dag.ProtoNode:
 		fsn, err := ft.FSNodeFromBytes(nd.Data())
 		if err != nil {
@@ -138,7 +139,6 @@ func (fi *File) Size() (int64, error) {
 }
 
 // GetNode returns the dag node associated with this file
-// TODO: Use this method and do not access the `nodeLock` directly anywhere else.
 func (fi *File) GetNode() (ipld.Node, error) {
 	fi.nodeLock.RLock()
 	defer fi.nodeLock.RUnlock()
@@ -160,14 +160,15 @@ func (fi *File) Flush() error {
 		return err
 	}
 
-	defer fd.Close()
-
-	return fd.Flush()
+	// Close calls fd.Flush() and will do a full sync since it was opened with
+	// Sync=true. So, there is not need to call fd.Flush()
+	return fd.Close()
 }
 
 func (fi *File) Sync() error {
-	// just being able to take the writelock means the descriptor is synced
-	// TODO: Why?
+	// The descriptor lock is locked in File.Open and unlocked in
+	// fileDescriptor.Close. Taking the writelock ensures that this File is not
+	// open.
 	fi.desclock.Lock()
 	fi.desclock.Unlock()
 	return nil

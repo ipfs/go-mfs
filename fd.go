@@ -1,6 +1,7 @@
 package mfs
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -19,6 +20,8 @@ const (
 	stateDirty
 	stateClosed
 )
+
+var ErrClosed = errors.New("file closed")
 
 // One `File` can have many `FileDescriptor`s associated to it
 // (only one if it's RW, many if they are RO, see `File.desclock`).

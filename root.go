@@ -5,7 +5,6 @@ package mfs
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,17 +12,7 @@ import (
 	ft "github.com/ipfs/go-unixfs"
 
 	ipld "github.com/ipfs/go-ipld-format"
-	logging "github.com/ipfs/go-log"
 )
-
-// TODO: Remove if not used.
-var ErrNotExist = errors.New("no such rootfs")
-var ErrClosed = errors.New("file closed")
-
-var log = logging.Logger("mfs")
-
-// TODO: Remove if not used.
-var ErrIsDirectory = errors.New("error: is a directory")
 
 // The information that an MFS `Directory` has about its children
 // when updating one of its entries: when a child mutates it signals
@@ -61,6 +50,11 @@ const (
 	TDir
 )
 
+const (
+	repubQuick = 300 * time.Millisecond
+	repubLong  = 3 * time.Second
+)
+
 // FSNode abstracts the `Directory` and `File` structures, it represents
 // any child node in the MFS (i.e., all the nodes besides the `Root`). It
 // is the counterpart of the `parent` interface which represents any
@@ -85,52 +79,45 @@ func IsFile(fsn FSNode) bool {
 
 // Root represents the root of a filesystem tree.
 type Root struct {
-
 	// Root directory of the MFS layout.
 	dir *Directory
 
 	repub *Republisher
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewRoot creates a new Root and starts up a republisher routine for it.
-func NewRoot(parent context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
-
-	var repub *Republisher
-	if pf != nil {
-		repub = NewRepublisher(parent, pf, time.Millisecond*300, time.Second*3)
-
-		// No need to take the lock here since we just created
-		// the `Republisher` and no one has access to it yet.
-
-		go repub.Run(node.Cid())
-	}
-
-	root := &Root{
-		repub: repub,
-	}
-
+func NewRoot(ctx context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
 	fsn, err := ft.FSNodeFromBytes(node.Data())
 	if err != nil {
-		log.Error("IPNS pointer was not unixfs node")
-		// TODO: IPNS pointer?
-		return nil, err
+		return nil, fmt.Errorf("node data was not unixfs node: %s", err)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+
+	root := &Root{
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
 	switch fsn.Type() {
 	case ft.TDirectory, ft.THAMTShard:
-		newDir, err := NewDirectory(parent, node.String(), node, root, ds)
+		root.dir, err = NewDirectory(ctx, node.String(), node, root, ds)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
-
-		root.dir = newDir
-	case ft.TFile, ft.TMetadata, ft.TRaw:
-		return nil, fmt.Errorf("root can't be a file (unixfs type: %s)", fsn.Type())
-		// TODO: This special error reporting case doesn't seem worth it, we either
-		// have a UnixFS directory or we don't.
 	default:
-		return nil, fmt.Errorf("unrecognized unixfs type: %s", fsn.Type())
+		cancel()
+		return nil, fmt.Errorf("root must be a unixfs directory, not type: %s", fsn.Type())
 	}
+
+	if pf != nil {
+		root.repub = NewRepublisher(ctx, pf, repubQuick, repubLong, node.Cid())
+	}
+
 	return root, nil
 }
 
@@ -174,10 +161,7 @@ func (kr *Root) FlushMemFree(ctx context.Context) error {
 	dir.lock.Lock()
 	defer dir.lock.Unlock()
 
-	for name := range dir.entriesCache {
-		delete(dir.entriesCache, name)
-	}
-	// TODO: Can't we just create new maps?
+	dir.entriesCache = make(map[string]FSNode)
 
 	return nil
 }
@@ -190,12 +174,17 @@ func (kr *Root) FlushMemFree(ctx context.Context) error {
 // the top), document it and maybe make it an anonymous variable (if
 // that's possible).
 func (kr *Root) updateChildEntry(c child) error {
-	err := kr.GetDirectory().dagService.Add(context.TODO(), c.Node)
+	dir := kr.GetDirectory()
+
+	dir.lock.Lock()
+
+	err := dir.dagService.Add(kr.ctx, c.Node)
 	if err != nil {
+		dir.lock.Unlock()
 		return err
 	}
-	// TODO: Why are we not using the inner directory lock nor
-	// applying the same procedure as `Directory.updateChildEntry`?
+
+	dir.lock.Unlock()
 
 	if kr.repub != nil {
 		kr.repub.Update(c.Node.Cid())
@@ -204,14 +193,22 @@ func (kr *Root) updateChildEntry(c child) error {
 }
 
 func (kr *Root) Close() error {
-	nd, err := kr.GetDirectory().GetNode()
+	defer kr.cancel()
+
+	dir := kr.GetDirectory()
+	nd, err := dir.GetNode()
 	if err != nil {
 		return err
 	}
 
+	dir.lock.Lock()
+	defer dir.lock.Unlock()
+
 	if kr.repub != nil {
-		kr.repub.Update(nd.Cid())
-		return kr.repub.Close()
+		repub := kr.repub
+		kr.repub = nil
+		repub.Update(nd.Cid())
+		return repub.Close(kr.ctx)
 	}
 
 	return nil
