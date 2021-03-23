@@ -167,8 +167,11 @@ func (fi *File) Flush() error {
 
 func (fi *File) Sync() error {
 	// The descriptor lock is locked in File.Open and unlocked in
-	// fileDescriptor.Close. Taking the writelock ensures that this File is not
-	// open.
+	// fileDescriptor.Close. Taking the writelock here waits for any readers or
+	// writer to finish.  This guarantees that any readers or writer, that
+	// opened the file before the call to Sync, have closed the file.  This
+	// does not guarantee that a new reader or writer has not opened the file
+	// after desclock is unlocked.
 	fi.desclock.Lock()
 	fi.desclock.Unlock()
 	return nil

@@ -247,6 +247,7 @@ func TestBasic(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Test that calling Close on root returns without error
 	done := make(chan struct{})
 	go func() {
 		err = rt.Close()
@@ -261,6 +262,7 @@ func TestBasic(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Test that the root can be closed again without error
 	err = rt.Close()
 	if err != nil {
 		t.Fatal(err)
