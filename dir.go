@@ -403,6 +403,11 @@ func (d *Directory) sync() error {
 		if err != nil {
 			return err
 		}
+
+		// Although cache is cleared at end of function, delete each entry
+		// after update to prevent unnecessary future update in case of failure
+		// before end of loop
+		delete(d.entriesCache, name)
 	}
 
 	// Clear entries cache

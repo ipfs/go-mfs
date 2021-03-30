@@ -161,20 +161,8 @@ func (fi *File) Flush() error {
 	}
 
 	// Close calls fd.Flush() and will do a full sync since it was opened with
-	// Sync=true. So, there is not need to call fd.Flush()
+	// Sync=true. So, there is no need to call fd.Flush()
 	return fd.Close()
-}
-
-func (fi *File) Sync() error {
-	// The descriptor lock is locked in File.Open and unlocked in
-	// fileDescriptor.Close. Taking the writelock here waits for any readers or
-	// writer to finish.  This guarantees that any readers or writer, that
-	// opened the file before the call to Sync, have closed the file.  This
-	// does not guarantee that a new reader or writer has not opened the file
-	// after desclock is unlocked.
-	fi.desclock.Lock()
-	fi.desclock.Unlock()
-	return nil
 }
 
 // Type returns the type FSNode this is

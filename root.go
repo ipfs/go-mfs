@@ -205,8 +205,10 @@ func (kr *Root) Close() error {
 	defer dir.lock.Unlock()
 
 	if kr.repub != nil {
+		// Republished not available after close
 		repub := kr.repub
 		kr.repub = nil
+		// Publish root CID and stop republisher after update is published.
 		repub.Update(nd.Cid())
 		return repub.Close(kr.ctx)
 	}

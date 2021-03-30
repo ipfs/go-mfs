@@ -2,6 +2,7 @@ package mfs
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -93,10 +94,10 @@ func TestRepublisher(t *testing.T) {
 		t.Errorf("expected %q, got %v", context.DeadlineExceeded, err)
 	}
 
+	// Continue clearing the pub channel until stopPub signaled.  Signal stopped
+	// chan when publishing becomes blocked due to pub chan not being cleared.
 	stopPub := make(chan struct{})
-	stopped := make(chan struct{})
 	go func() {
-		defer close(stopped)
 		for {
 			select {
 			case <-pub:
@@ -142,5 +143,73 @@ func TestRepublisher(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Error("repub.Close did not finish")
+	}
+}
+
+func TestPubRetry(t *testing.T) {
+	pubFail := make(chan cid.Cid, 1)
+	gate := make(chan struct{})
+	pf := func(ctx context.Context, c cid.Cid) error {
+		select {
+		case <-gate:
+			return nil
+		default:
+		}
+		pubFail <- c
+		return errors.New("some failure")
+	}
+
+	tshort := time.Millisecond * 50
+	tlong := time.Millisecond * 500
+
+	testCid1, _ := cid.Parse("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVH")
+	testCid2, _ := cid.Parse("QmeomffUNfmQy76CQGy9NdmqEnnHU9soCexBnGU3ezPHVX")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	rp := NewRepublisher(ctx, pf, tshort, tlong, cid.Undef)
+
+	rp.Update(testCid1)
+
+	waitDone := make(chan struct{})
+	go func() {
+		rp.WaitPub(context.Background())
+		waitDone <- struct{}{}
+	}()
+
+	go func() {
+		rp.WaitPub(context.Background())
+		waitDone <- struct{}{}
+	}()
+
+	c := <-pubFail
+	if c != testCid1 {
+		t.Fatal("expected", testCid1)
+	}
+	// Check that pubfunc is called with new value after failure
+	rp.Update(testCid2)
+	c = <-pubFail
+	if c != testCid2 {
+		t.Fatal("expected", testCid2)
+	}
+	// Check that next call to pubfunc, after repeated update, is same as before.
+	rp.Update(testCid2)
+	c = <-pubFail
+	if c != testCid2 {
+		t.Fatal("expected", testCid2)
+	}
+
+	// Make pubfunc succeed on next try
+	close(gate)
+
+	// Make sure that all waiters were answered
+	timeout := time.After(time.Second)
+	for x := 0; x < 2; x++ {
+		select {
+		case <-waitDone:
+		case <-timeout:
+			t.Fatal("lost waiter after publish failure")
+		}
 	}
 }

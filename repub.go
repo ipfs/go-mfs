@@ -19,9 +19,9 @@ type Republisher struct {
 	update           chan cid.Cid
 	immediatePublish chan chan struct{}
 
-	cancel  func()
-	once    sync.Once
-	stopped chan struct{}
+	cancel  func()        // called by Close to stop run goroutine
+	once    sync.Once     // protects against multiple calls to Close
+	stopped chan struct{} // closed to indicate run goroutine exited
 }
 
 // NewRepublisher creates a new Republisher object to republish the given root
@@ -58,9 +58,7 @@ func (rp *Republisher) WaitPub(ctx context.Context) error {
 	}
 }
 
-// Close tells the republisher to stop and waits for it to stop.  If it is
-// necessary to wait for any current values to be published, then call WaitPub
-// prior to calling Close.
+// Close tells the republisher to stop and waits for it to stop.
 func (rp *Republisher) Close(ctx context.Context) error {
 	rp.once.Do(func() {
 		_ = rp.WaitPub(ctx)
@@ -121,12 +119,17 @@ func (rp *Republisher) run(ctx context.Context, timeoutShort, timeoutLong time.D
 	var toPublish cid.Cid
 	var waiter chan struct{}
 
+	immediatePublish := rp.immediatePublish
+
 	for ctx.Err() == nil {
 		select {
 		case <-ctx.Done():
 			return
 		case newValue := <-rp.update:
 			// Skip already published values.
+			//
+			// This is safe on retry since lastPublished is not set if retrying after
+			// pubfunc returns error.
 			if lastPublished.Equals(newValue) {
 				// Break to the end of the switch to cleanup any timers.
 				toPublish = cid.Undef
@@ -144,7 +147,7 @@ func (rp *Republisher) run(ctx context.Context, timeoutShort, timeoutLong time.D
 			// Finally, set the new value to publish.
 			toPublish = newValue
 			continue
-		case waiter = <-rp.immediatePublish:
+		case waiter = <-immediatePublish:
 			// Make sure to grab the *latest* value to publish.
 			select {
 			case toPublish = <-rp.update:
@@ -180,16 +183,21 @@ func (rp *Republisher) run(ctx context.Context, timeoutShort, timeoutLong time.D
 		if toPublish.Defined() {
 			err := rp.pubfunc(ctx, toPublish)
 			if err != nil {
-				// Keep retrying until publish succeeds, or run is stopped.
-				// Publish newer values if available.
+				// Retrying the call to publish, using the same or newer value,
+				// on the next timer expiration.
 				longer.Reset(timeoutLong)
+				// Do not notify any current waiter, and stop reading waiters from
+				// immediatePublish so that current writer is not last.
+				immediatePublish = nil
 				continue
 			}
+			immediatePublish = rp.immediatePublish // resume reading waiters
 			lastPublished = toPublish
 			toPublish = cid.Undef
 		}
 
-		// 3. Trigger anything waiting in `WaitPub`.
+		// 3. Notify anything waiting in `WaitPub` on successful call to
+		// pubfunc or if nothing to publish.
 		if waiter != nil {
 			close(waiter)
 			waiter = nil
