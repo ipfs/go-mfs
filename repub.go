@@ -186,8 +186,9 @@ func (rp *Republisher) run(ctx context.Context, timeoutShort, timeoutLong time.D
 				// Retrying the call to publish, using the same or newer value,
 				// on the next timer expiration.
 				longer.Reset(timeoutLong)
-				// Do not notify any current waiter, and stop reading waiters from
-				// immediatePublish so that current writer is not last.
+				// Do not notify any current waiter. Stop reading waiters from
+				// immediatePublish so that current waiter is notified only
+				// after a successful call to pubfunc.
 				immediatePublish = nil
 				continue
 			}
