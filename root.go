@@ -5,13 +5,10 @@ package mfs
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	dag "github.com/ipfs/go-merkledag"
-	ft "github.com/ipfs/go-unixfs"
-
 	ipld "github.com/ipfs/go-ipld-format"
+	dag "github.com/ipfs/go-merkledag"
 )
 
 // The information that an MFS `Directory` has about its children
@@ -90,29 +87,18 @@ type Root struct {
 
 // NewRoot creates a new Root and starts up a republisher routine for it.
 func NewRoot(ctx context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
-	fsn, err := ft.FSNodeFromBytes(node.Data())
-	if err != nil {
-		return nil, fmt.Errorf("node data was not unixfs node: %s", err)
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
-
 	root := &Root{
 		ctx:    ctx,
 		cancel: cancel,
 	}
 
-	switch fsn.Type() {
-	case ft.TDirectory, ft.THAMTShard:
-		root.dir, err = NewDirectory(ctx, node.String(), node, root, ds)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-	default:
+	newDir, err := NewDirectory(ctx, node.String(), node, root, ds)
+	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("root must be a unixfs directory, not type: %s", fsn.Type())
+		return nil, err
 	}
+	root.dir = newDir
 
 	if pf != nil {
 		root.repub = NewRepublisher(ctx, pf, repubQuick, repubLong, node.Cid())

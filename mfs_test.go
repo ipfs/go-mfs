@@ -1433,3 +1433,22 @@ func TestFSNodeType(t *testing.T) {
 		t.Fatal("FSNode type should be file, but not")
 	}
 }
+
+func TestNewRoot(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ds := getDagserv(t)
+
+	root := emptyDirNode()
+	_, err := NewRoot(ctx, ds, root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	badRoot := dag.NodeWithData(ft.FilePBData(nil, 0))
+	_, err = NewRoot(ctx, ds, badRoot, nil)
+	if err != uio.ErrNotADir {
+		t.Fatal("expected ErrNotADir error, got", err)
+	}
+}
