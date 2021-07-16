@@ -16,4 +16,4 @@ require (
 	github.com/libp2p/go-libp2p-testing v0.0.4
 )
 
-go 1.13
+go 1.15
