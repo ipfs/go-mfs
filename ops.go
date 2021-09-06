@@ -6,6 +6,7 @@ import (
 	"os"
 	gopath "path"
 	"strings"
+	"time"
 
 	path "github.com/ipfs/go-path"
 
@@ -243,4 +244,32 @@ func FlushPath(ctx context.Context, rt *Root, pth string) (ipld.Node, error) {
 
 	rt.repub.WaitPub(ctx)
 	return nd.GetNode()
+}
+
+func Chmod(rt *Root, pth string, mode os.FileMode) error {
+	nd, err := Lookup(rt, pth)
+	if err != nil {
+		return err
+	}
+
+	switch n := nd.(type) {
+	case *File:
+		return n.SetMode(mode)
+	default:
+		return fmt.Errorf("unsupported UnixFs node type")
+	}
+}
+
+func Touch(rt *Root, pth string, ts time.Time) error {
+	nd, err := Lookup(rt, pth)
+	if err != nil {
+		return err
+	}
+
+	switch n := nd.(type) {
+	case *File:
+		return n.SetModTime(ts)
+	default:
+		return fmt.Errorf("unsupported UnixFs node type")
+	}
 }
