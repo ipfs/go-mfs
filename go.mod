@@ -12,7 +12,7 @@ require (
 	github.com/ipfs/go-log v1.0.5
 	github.com/ipfs/go-merkledag v0.2.3
 	github.com/ipfs/go-path v0.0.7
-	github.com/ipfs/go-unixfs v0.2.6
+	github.com/ipfs/go-unixfs v0.2.7-0.20211022171058-f7a8e99934ab
 	github.com/libp2p/go-libp2p-testing v0.0.4
 )
 
