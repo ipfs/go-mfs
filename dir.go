@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path"
-	"sync"
-	"time"
-
 	dag "github.com/ipfs/go-merkledag"
 	ft "github.com/ipfs/go-unixfs"
 	uio "github.com/ipfs/go-unixfs/io"
+	"os"
+	"path"
+	"sync"
 
 	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
@@ -39,8 +37,6 @@ type Directory struct {
 	// UnixFS directory implementation used for creating,
 	// reading and editing directories.
 	unixfsDir uio.Directory
-
-	modTime time.Time
 }
 
 // NewDirectory constructs a new MFS directory.
@@ -62,7 +58,6 @@ func NewDirectory(ctx context.Context, name string, node ipld.Node, parent paren
 		ctx:          ctx,
 		unixfsDir:    db,
 		entriesCache: make(map[string]FSNode),
-		modTime:      time.Now(),
 	}, nil
 }
 
@@ -132,9 +127,6 @@ func (d *Directory) updateChild(c child) error {
 	if err != nil {
 		return err
 	}
-
-	d.modTime = time.Now()
-
 	return nil
 }
 
@@ -290,6 +282,10 @@ func (d *Directory) ForEachEntry(ctx context.Context, f func(NodeListing) error)
 }
 
 func (d *Directory) Mkdir(name string) (*Directory, error) {
+	return d.MkdirWithOpts(name, MkdirOpts{})
+}
+
+func (d *Directory) MkdirWithOpts(name string, opts MkdirOpts) (*Directory, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -305,7 +301,7 @@ func (d *Directory) Mkdir(name string) (*Directory, error) {
 		}
 	}
 
-	ndir := ft.EmptyDirNode()
+	ndir := ft.EmptyDirNodeWithStat(opts.Mode, opts.ModTime)
 	ndir.SetCidBuilder(d.GetCidBuilder())
 
 	err = d.dagService.Add(d.ctx, ndir)
@@ -365,7 +361,6 @@ func (d *Directory) AddChild(name string, nd ipld.Node) error {
 		return err
 	}
 
-	d.modTime = time.Now()
 	return nil
 }
 

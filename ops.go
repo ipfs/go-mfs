@@ -124,6 +124,8 @@ type MkdirOpts struct {
 	Mkparents  bool
 	Flush      bool
 	CidBuilder cid.Builder
+	Mode       os.FileMode
+	ModTime    time.Time
 }
 
 // Mkdir creates a directory at 'path' under the directory 'd', creating
@@ -173,7 +175,7 @@ func Mkdir(r *Root, pth string, opts MkdirOpts) error {
 		cur = next
 	}
 
-	final, err := cur.Mkdir(parts[len(parts)-1])
+	final, err := cur.MkdirWithOpts(parts[len(parts)-1], opts)
 	if err != nil {
 		if !opts.Mkparents || err != os.ErrExist || final == nil {
 			return err
