@@ -206,9 +206,7 @@ func (fi *File) SetMode(mode os.FileMode) error {
 		return err
 	}
 
-	mode = (fsn.Mode() & 0xFFFFF000) | (mode & 0xFFF)
 	fsn.SetMode(mode)
-
 	data, err := fsn.GetBytes()
 	if err != nil {
 		return err

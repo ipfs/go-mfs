@@ -666,8 +666,8 @@ func TestMfsModeAndModTime(t *testing.T) {
 	ts, ts2 := time.Now(), time.Time{}
 
 	// can set mode
-	if err = fi.SetMode(644); err == nil {
-		if mode, err = fi.Mode(); mode != 644 {
+	if err = fi.SetMode(0644); err == nil {
+		if mode, err = fi.Mode(); mode != 0644 {
 			t.Fatal("failed to get correct mode of file")
 		}
 	}
