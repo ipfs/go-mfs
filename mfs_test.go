@@ -659,7 +659,7 @@ func TestMfsModeAndModTime(t *testing.T) {
 	fi := fsn.(*File)
 
 	if fi.Type() != TFile {
-		t.Fatal("some is seriously wrong here")
+		t.Fatal("something is seriously wrong here")
 	}
 
 	var mode os.FileMode
