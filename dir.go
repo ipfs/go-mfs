@@ -171,7 +171,7 @@ func (d *Directory) cacheNode(name string, nd ipld.Node) (FSNode, error) {
 
 			d.entriesCache[name] = ndir
 			return ndir, nil
-		case ft.TFile, ft.TRaw, ft.TSymlink:
+		case ft.TFile, ft.TRaw, ft.TSymlink, ft.TEncFile:
 			nfi, err := NewFile(name, nd, d, d.dagService)
 			if err != nil {
 				return nil, err
