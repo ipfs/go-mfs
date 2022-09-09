@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	gopath "path"
 	"sort"
 	"sync"
 	"testing"
@@ -36,7 +37,8 @@ func emptyDirNode() *dag.ProtoNode {
 	return dag.NodeWithData(ft.FolderPBData())
 }
 
-func getDagserv(t *testing.T) ipld.DAGService {
+func getDagserv(t testing.TB) ipld.DAGService {
+	t.Helper()
 	db := dssync.MutexWrap(ds.NewMapDatastore())
 	bs := bstore.NewBlockstore(db)
 	blockserv := bserv.New(bs, offline.Exchange(bs))
@@ -201,7 +203,9 @@ func catNode(ds ipld.DAGService, nd *dag.ProtoNode) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
-func setupRoot(ctx context.Context, t *testing.T) (ipld.DAGService, *Root) {
+func setupRoot(ctx context.Context, t testing.TB) (ipld.DAGService, *Root) {
+	t.Helper()
+
 	ds := getDagserv(t)
 
 	root := emptyDirNode()
@@ -1418,4 +1422,149 @@ func TestFSNodeType(t *testing.T) {
 	if !ret {
 		t.Fatal("FSNode type should be file, but not")
 	}
+}
+
+func getParentDir(root *Root, dir string) (*Directory, error) {
+	parent, err := Lookup(root, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	pdir, ok := parent.(*Directory)
+	if !ok {
+		return nil, errors.New("expected *Directory, didn't get it. This is likely a race condition")
+	}
+	return pdir, nil
+}
+
+func getFileHandle(r *Root, path string, create bool, builder cid.Builder) (*File, error) {
+	target, err := Lookup(r, path)
+	switch err {
+	case nil:
+		fi, ok := target.(*File)
+		if !ok {
+			return nil, fmt.Errorf("%s was not a file", path)
+		}
+		return fi, nil
+
+	case os.ErrNotExist:
+		if !create {
+			return nil, err
+		}
+
+		// if create is specified and the file doesn't exist, we create the file
+		dirname, fname := gopath.Split(path)
+		pdir, err := getParentDir(r, dirname)
+		if err != nil {
+			return nil, err
+		}
+
+		if builder == nil {
+			builder = pdir.GetCidBuilder()
+		}
+
+		nd := dag.NodeWithData(ft.FilePBData(nil, 0))
+		nd.SetCidBuilder(builder)
+		err = pdir.AddChild(fname, nd)
+		if err != nil {
+			return nil, err
+		}
+
+		fsn, err := pdir.Child(fname)
+		if err != nil {
+			return nil, err
+		}
+
+		fi, ok := fsn.(*File)
+		if !ok {
+			return nil, errors.New("expected *File, didn't get it. This is likely a race condition")
+		}
+		return fi, nil
+
+	default:
+		return nil, err
+	}
+}
+
+func FuzzMkdirAndWriteConcurrently(f *testing.F) {
+
+	testCases := []struct {
+		flush     bool
+		mkparents bool
+		dir       string
+
+		filepath string
+		content  []byte
+	}{
+		{
+			flush:     true,
+			mkparents: true,
+			dir:       "/test/dir1",
+
+			filepath: "/test/dir1/file.txt",
+			content:  []byte("file content on dir 1"),
+		},
+		{
+			flush:     true,
+			mkparents: false,
+			dir:       "/test/dir2",
+
+			filepath: "/test/dir2/file.txt",
+			content:  []byte("file content on dir 2"),
+		},
+		{
+			flush:     false,
+			mkparents: true,
+			dir:       "/test/dir3",
+
+			filepath: "/test/dir3/file.txt",
+			content:  []byte("file content on dir 3"),
+		},
+		{
+			flush:     false,
+			mkparents: false,
+			dir:       "/test/dir4",
+
+			filepath: "/test/dir4/file.txt",
+			content:  []byte("file content on dir 4"),
+		},
+	}
+
+	for _, tc := range testCases {
+		f.Add(tc.flush, tc.mkparents, tc.dir, tc.filepath, tc.content)
+	}
+
+	_, root := setupRoot(context.Background(), f)
+
+	f.Fuzz(func(t *testing.T, flush bool, mkparents bool, dir string, filepath string, filecontent []byte) {
+		err := Mkdir(root, dir, MkdirOpts{
+			Mkparents: mkparents,
+			Flush:     flush,
+		})
+		if err != nil {
+			t.Logf("error making dir %s: %s", dir, err)
+			return
+		}
+
+		fi, err := getFileHandle(root, filepath, true, nil)
+		if err != nil {
+			t.Logf("error getting file handle on path %s: %s", filepath, err)
+			return
+		}
+		wfd, err := fi.Open(Flags{Write: true, Sync: flush})
+		if err != nil {
+			t.Logf("error opening file from filepath %s: %s", filepath, err)
+			return
+		}
+
+		t.Cleanup(func() {
+			wfd.Close()
+		})
+
+		_, err = wfd.Write(filecontent)
+		if err != nil {
+			t.Logf("error writting to file from filepath %s: %s", filepath, err)
+		}
+	})
+
 }
