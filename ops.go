@@ -254,12 +254,7 @@ func Chmod(rt *Root, pth string, mode os.FileMode) error {
 		return err
 	}
 
-	switch n := nd.(type) {
-	case *File:
-		return n.SetMode(mode)
-	default:
-		return fmt.Errorf("unsupported UnixFs node type")
-	}
+	return nd.SetMode(mode)
 }
 
 func Touch(rt *Root, pth string, ts time.Time) error {
@@ -268,10 +263,5 @@ func Touch(rt *Root, pth string, ts time.Time) error {
 		return err
 	}
 
-	switch n := nd.(type) {
-	case *File:
-		return n.SetModTime(ts)
-	default:
-		return fmt.Errorf("unsupported UnixFs node type")
-	}
+	return nd.SetModTime(ts)
 }
