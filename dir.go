@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 
 	cid "github.com/ipfs/go-cid"
 	ipld "github.com/ipfs/go-ipld-format"
@@ -419,4 +420,69 @@ func (d *Directory) GetNode() (ipld.Node, error) {
 	}
 
 	return nd.Copy(), err
+}
+
+func (d *Directory) SetMode(mode os.FileMode) error {
+	nd, err := d.GetNode()
+	if err != nil {
+		return err
+	}
+
+	fsn, err := ft.ExtractFSNode(nd)
+	if err != nil {
+		return err
+	}
+
+	fsn.SetMode(mode)
+	data, err := fsn.GetBytes()
+	if err != nil {
+		return err
+	}
+
+	return d.setNodeData(data, nd.Links())
+}
+
+func (d *Directory) SetModTime(ts time.Time) error {
+	nd, err := d.GetNode()
+	if err != nil {
+		return err
+	}
+
+	fsn, err := ft.ExtractFSNode(nd)
+	if err != nil {
+		return err
+	}
+
+	fsn.SetModTime(ts)
+	data, err := fsn.GetBytes()
+	if err != nil {
+		return err
+	}
+
+	return d.setNodeData(data, nd.Links())
+}
+
+func (d *Directory) setNodeData(data []byte, links []*ipld.Link) error {
+	nd := dag.NodeWithData(data)
+	nd.SetLinks(links)
+
+	err := d.dagService.Add(d.ctx, nd)
+	if err != nil {
+		return err
+	}
+
+	err = d.parent.updateChildEntry(child{d.name, nd})
+	if err != nil {
+		return err
+	}
+
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	db, err := uio.NewDirectoryFromNode(d.dagService, nd)
+	if err != nil {
+		return err
+	}
+	d.unixfsDir = db
+
+	return nil
 }
