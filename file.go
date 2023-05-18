@@ -16,6 +16,8 @@ import (
 // File represents a file in the MFS, its logic its mainly targeted
 // to coordinating (potentially many) `FileDescriptor`s pointing to
 // it.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.File
 type File struct {
 	inode
 
@@ -37,6 +39,8 @@ type File struct {
 
 // NewFile returns a NewFile object with the given parameters.  If the
 // Cid version is non-zero RawLeaves will be enabled.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.NewFile
 func NewFile(name string, node ipld.Node, parent parent, dserv ipld.DAGService) (*File, error) {
 	fi := &File{
 		inode: inode{

@@ -17,12 +17,18 @@ import (
 )
 
 // TODO: Remove if not used.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrNotExist
 var ErrNotExist = errors.New("no such rootfs")
+
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrClosed
 var ErrClosed = errors.New("file closed")
 
 var log = logging.Logger("mfs")
 
 // TODO: Remove if not used.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrIsDirectory
 var ErrIsDirectory = errors.New("error: is a directory")
 
 // The information that an MFS `Directory` has about its children
@@ -54,10 +60,13 @@ type parent interface {
 	updateChildEntry(c child) error
 }
 
+// Deprecated: use github.com/ipfs/boxo/mfs.NodeType
 type NodeType int
 
 const (
+	// Deprecated: use github.com/ipfs/boxo/mfs.TFile
 	TFile NodeType = iota
+	// Deprecated: use github.com/ipfs/boxo/mfs.TDir
 	TDir
 )
 
@@ -66,6 +75,8 @@ const (
 // is the counterpart of the `parent` interface which represents any
 // parent node in the MFS (`Root` and `Directory`).
 // (Not to be confused with the `unixfs.FSNode`.)
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.FSNode
 type FSNode interface {
 	GetNode() (ipld.Node, error)
 
@@ -74,16 +85,22 @@ type FSNode interface {
 }
 
 // IsDir checks whether the FSNode is dir type
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.IsDir
 func IsDir(fsn FSNode) bool {
 	return fsn.Type() == TDir
 }
 
 // IsFile checks whether the FSNode is file type
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.IsFile
 func IsFile(fsn FSNode) bool {
 	return fsn.Type() == TFile
 }
 
 // Root represents the root of a filesystem tree.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Root
 type Root struct {
 
 	// Root directory of the MFS layout.
@@ -93,6 +110,8 @@ type Root struct {
 }
 
 // NewRoot creates a new Root and starts up a republisher routine for it.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.NewRoot
 func NewRoot(parent context.Context, ds ipld.DAGService, node *dag.ProtoNode, pf PubFunc) (*Root, error) {
 
 	var repub *Republisher
