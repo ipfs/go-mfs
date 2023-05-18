@@ -17,13 +17,20 @@ import (
 	ipld "github.com/ipfs/go-ipld-format"
 )
 
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrNotYetImplemented
 var ErrNotYetImplemented = errors.New("not yet implemented")
+
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrInvalidChild
 var ErrInvalidChild = errors.New("invalid child node")
+
+// Deprecated: use github.com/ipfs/boxo/mfs.ErrDirExists
 var ErrDirExists = errors.New("directory already has entry by that name")
 
 // TODO: There's too much functionality associated with this structure,
 // let's organize it (and if possible extract part of it elsewhere)
 // and document the main features of `Directory` here.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Directory
 type Directory struct {
 	inode
 
@@ -47,6 +54,8 @@ type Directory struct {
 //
 // You probably don't want to call this directly. Instead, construct a new root
 // using NewRoot.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.NewDirectory
 func NewDirectory(ctx context.Context, name string, node ipld.Node, parent parent, dserv ipld.DAGService) (*Directory, error) {
 	db, err := uio.NewDirectoryFromNode(dserv, node)
 	if err != nil {
@@ -225,6 +234,7 @@ func (d *Directory) childUnsync(name string) (FSNode, error) {
 	return d.childNode(name)
 }
 
+// Deprecated: use github.com/ipfs/boxo/mfs.NodeListing
 type NodeListing struct {
 	Name string
 	Type int

@@ -9,9 +9,13 @@ import (
 
 // PubFunc is the user-defined function that determines exactly what
 // logic entails "publishing" a `Cid` value.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.PubFunc
 type PubFunc func(context.Context, cid.Cid) error
 
 // Republisher manages when to publish a given entry.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Republisher
 type Republisher struct {
 	TimeoutLong  time.Duration
 	TimeoutShort time.Duration
@@ -27,6 +31,8 @@ type Republisher struct {
 
 // NewRepublisher creates a new Republisher object to republish the given root
 // using the given short and long time intervals.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.NewRepublisher
 func NewRepublisher(ctx context.Context, pf PubFunc, tshort, tlong time.Duration) *Republisher {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Republisher{

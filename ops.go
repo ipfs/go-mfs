@@ -20,6 +20,8 @@ import (
 
 // Mv moves the file or directory at 'src' to 'dst'
 // TODO: Document what the strings 'src' and 'dst' represent.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Mv
 func Mv(r *Root, src, dst string) error {
 	srcDirName, srcFname := gopath.Split(src)
 
@@ -104,6 +106,8 @@ func lookupDir(r *Root, path string) (*Directory, error) {
 // TODO: Can this function add directories or just files? What would be the
 // difference between adding a directory with this method and creating it
 // with `Mkdir`.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.PutNode
 func PutNode(r *Root, path string, nd ipld.Node) error {
 	dirp, filename := gopath.Split(path)
 	if filename == "" {
@@ -119,6 +123,8 @@ func PutNode(r *Root, path string, nd ipld.Node) error {
 }
 
 // MkdirOpts is used by Mkdir
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.MkdirOpts
 type MkdirOpts struct {
 	Mkparents  bool
 	Flush      bool
@@ -127,6 +133,8 @@ type MkdirOpts struct {
 
 // Mkdir creates a directory at 'path' under the directory 'd', creating
 // intermediary directories as needed if 'mkparents' is set to true
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Mkdir
 func Mkdir(r *Root, pth string, opts MkdirOpts) error {
 	if pth == "" {
 		return fmt.Errorf("no path given to Mkdir")
@@ -195,6 +203,8 @@ func Mkdir(r *Root, pth string, opts MkdirOpts) error {
 // Lookup extracts the root directory and performs a lookup under it.
 // TODO: Now that the root is always a directory, can this function
 // be collapsed with `DirLookup`? Or at least be made a method of `Root`?
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.Lookup
 func Lookup(r *Root, path string) (FSNode, error) {
 	dir := r.GetDirectory()
 
@@ -203,6 +213,8 @@ func Lookup(r *Root, path string) (FSNode, error) {
 
 // DirLookup will look up a file or directory at the given path
 // under the directory 'd'
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.DirLookup
 func DirLookup(d *Directory, pth string) (FSNode, error) {
 	pth = strings.Trim(pth, "/")
 	parts := path.SplitList(pth)
@@ -230,6 +242,8 @@ func DirLookup(d *Directory, pth string) (FSNode, error) {
 
 // TODO: Document this function and link its functionality
 // with the republisher.
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.FlushPath
 func FlushPath(ctx context.Context, rt *Root, pth string) (ipld.Node, error) {
 	nd, err := Lookup(rt, pth)
 	if err != nil {

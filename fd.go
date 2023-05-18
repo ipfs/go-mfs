@@ -26,6 +26,8 @@ const (
 // instance of a `DagModifier`), that's why it (and not the `File`)
 // has the responsibility to `Flush` (which crystallizes that view
 // in the `File`'s `Node`).
+//
+// Deprecated: use github.com/ipfs/boxo/mfs.FileDescriptor
 type FileDescriptor interface {
 	io.Reader
 	CtxReadFull(context.Context, []byte) (int, error)
