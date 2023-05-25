@@ -21,7 +21,6 @@
 
 - [Install](#install)
 - [Usage](#usage)
-- [Contribute](#contribute)
 - [License](#license)
 
 ## Install
@@ -61,12 +60,6 @@ This repository contains many files, all belonging to the root `mfs` package.
 * `repub.go`: `Republisher`.
 * `mfs_test.go`: General tests (needs a [revision](https://github.com/ipfs/go-mfs/issues/9)).
 * `repub_test.go`: Republisher-specific tests (contains only the `TestRepublisher` function).
-
-## Contribute
-
-PRs accepted.
-
-Small note: If editing the README, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme) specification.
 
 ## License
 
